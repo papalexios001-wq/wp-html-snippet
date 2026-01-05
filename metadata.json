@@ -1,0 +1,7 @@
+{
+  "name": "HTML Snippet AI (New 001)",
+  "description": "An AI-powered tool to enhance WordPress blog posts with interactive HTML snippets. It analyzes posts, suggests valuable tool ideas, generates the code, and inserts it to boost reader engagement and topical authority.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
