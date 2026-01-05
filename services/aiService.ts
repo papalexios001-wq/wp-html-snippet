@@ -7,17 +7,22 @@ import { AiProvider, WordPressPost, ToolIdea } from '../types';
  * @returns The parsed JSON object or array.
  * @throws An error if the JSON cannot be parsed.
  */
-function parseJsonResponse<T>(text: string): T {
+function parseJsonResponse<T>(text: string | undefined | null): T {
+    if (!text) {
+        throw new Error("Failed to parse JSON: Input text is empty or undefined.");
+    }
+    const safeText = String(text);
+
     try {
         // Stage 0: Clean common markdown artifacts immediately
-        let cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        let cleaned = safeText.replace(/```json/g, '').replace(/```/g, '').trim();
         
         // Stage 1: Attempt to parse the cleaned text directly.
         return JSON.parse(cleaned) as T;
     } catch (directParseError) {
         // Stage 2: If direct parsing fails, try to extract a JSON object/array via Regex.
         // This handles cases where the model adds conversational text before or after.
-        const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+        const jsonMatch = safeText.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
         if (jsonMatch && jsonMatch[0]) {
             try {
                 return JSON.parse(jsonMatch[0]) as T;
@@ -26,7 +31,7 @@ function parseJsonResponse<T>(text: string): T {
             }
         }
 
-        throw new Error(`Failed to parse JSON response. Raw text: "${text.substring(0, 100)}..."`);
+        throw new Error(`Failed to parse JSON response. Raw text: "${safeText.substring(0, 100)}..."`);
     }
 }
 
@@ -191,9 +196,10 @@ Output JSON ONLY:
                     if (!response.ok) throw new Error(`API Error: ${response.status}`);
                     
                     const data = await response.json();
-                    const rawContent = provider === AiProvider.Anthropic ? data.content[0].text : data.choices[0].message.content;
+                    const rawContent = provider === AiProvider.Anthropic ? data.content?.[0]?.text : data.choices?.[0]?.message?.content;
+                    
                     // SOTA Fix: Handle potentially undefined rawContent
-                    const parsedResult = parseJsonResponse<{posts: Partial<WordPressPost>[] }>(rawContent || '');
+                    const parsedResult = parseJsonResponse<{posts: Partial<WordPressPost>[] }>(rawContent);
                     batchScores = parsedResult.posts || [];
                 }
                 
@@ -291,17 +297,19 @@ Icons: "calculator", "chart", "list", "idea"`;
         const response = await fetch(config.url, { method: 'POST', headers: config.headers, body });
         if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const data = await response.json();
-        const rawContent = provider === AiProvider.Anthropic ? data.content[0].text : data.choices[0].message.content;
+        const rawContent = provider === AiProvider.Anthropic ? data.content?.[0]?.text : data.choices?.[0]?.message?.content;
         
         // SOTA Fix: Handle potentially undefined rawContent
-        return parseJsonResponse<{ ideas: ToolIdea[] }>(rawContent || '').ideas || [];
+        return parseJsonResponse<{ ideas: ToolIdea[] }>(rawContent).ideas || [];
     });
 }
 
 /**
  * Intelligent Stream Cleaner to remove markdown artifacts on the fly.
+ * Handles nullable inputs safely.
  */
-function cleanStreamChunk(chunk: string, isFirstChunk: boolean): string {
+function cleanStreamChunk(chunk: string | undefined | null, isFirstChunk: boolean): string {
+    if (!chunk) return '';
     let clean = chunk;
     if (isFirstChunk) {
         clean = clean.replace(/^\s*```html\s*/i, '').replace(/^\s*```\s*/i, '');
@@ -348,6 +356,7 @@ AEO & SEO MANDATES:
             }
         });
         for await (const chunk of responseStream) {
+            // SOTA Fix: Handle undefined chunk.text safely
             const text = cleanStreamChunk(chunk.text, isFirstChunk);
             if (text) {
                 yield text;
