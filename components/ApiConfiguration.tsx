@@ -64,6 +64,14 @@ export default function ApiConfiguration(): React.ReactNode {
       </div>
 
       <div className="space-y-4">
+        {selectedProvider === AiProvider.Gemini ? (
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center justify-between">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Note:</strong> The Google Gemini API key is securely managed via environment variables (<code>process.env.API_KEY</code>). You do not need to enter it here.
+                </p>
+                <div className="w-5 h-5">{renderValidationStatus()}</div>
+            </div>
+        ) : (
         <div>
           <label htmlFor={`${selectedProvider}-api-key`} className="block text-sm font-medium leading-6 text-slate-900 dark:text-slate-300">
             {providerDetails.name} API Key
@@ -80,6 +88,7 @@ export default function ApiConfiguration(): React.ReactNode {
              <div className="w-5 h-5">{renderValidationStatus()}</div>
           </div>
         </div>
+        )}
 
         {providerDetails.requiresModelField && (
           <div>

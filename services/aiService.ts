@@ -48,7 +48,8 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Pr
 
 // Helper to initialize the Gemini client
 const getGeminiClient = (apiKey: string): GoogleGenAI => {
-    return new GoogleGenAI({ apiKey });
+    // Guideline: The API key must be obtained exclusively from the environment variable process.env.API_KEY.
+    return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 const getProviderConfig = (provider: AiProvider, apiKey: string) => {
@@ -82,7 +83,9 @@ const getProviderConfig = (provider: AiProvider, apiKey: string) => {
  * Validates an API key by making a minimal call.
  */
 export async function validateApiKey(provider: AiProvider, apiKey: string, model: string): Promise<boolean> {
-    if (!apiKey) return false;
+    // For Gemini, apiKey argument is ignored as we use process.env.API_KEY
+    if (provider !== AiProvider.Gemini && !apiKey) return false;
+    
     try {
         return await withRetry(async () => {
             if (provider === AiProvider.Gemini) {
@@ -90,7 +93,8 @@ export async function validateApiKey(provider: AiProvider, apiKey: string, model
                 await ai.models.generateContent({
                     model: 'gemini-3-flash-preview',
                     contents: 'h', 
-                    config: { maxOutputTokens: 1 }
+                    // Guideline: If maxOutputTokens is set, thinkingBudget must be set or used with 0 to disable thinking.
+                    config: { maxOutputTokens: 1, thinkingConfig: { thinkingBudget: 0 } }
                 });
                 return true;
             }
