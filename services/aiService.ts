@@ -52,7 +52,7 @@ const getGeminiClient = (apiKey: string): GoogleGenAI => {
     return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
-const getProviderConfig = (provider: AiProvider, apiKey: string) => {
+const getProviderConfig = (provider: AiProvider, apiKey: string): { url: string, headers: Record<string, string> } => {
     switch (provider) {
         case AiProvider.OpenAI:
             return {
@@ -192,7 +192,8 @@ Output JSON ONLY:
                     
                     const data = await response.json();
                     const rawContent = provider === AiProvider.Anthropic ? data.content[0].text : data.choices[0].message.content;
-                    const parsedResult = parseJsonResponse<{posts: Partial<WordPressPost>[] }>(rawContent);
+                    // SOTA Fix: Handle potentially undefined rawContent
+                    const parsedResult = parseJsonResponse<{posts: Partial<WordPressPost>[] }>(rawContent || '');
                     batchScores = parsedResult.posts || [];
                 }
                 
@@ -292,7 +293,8 @@ Icons: "calculator", "chart", "list", "idea"`;
         const data = await response.json();
         const rawContent = provider === AiProvider.Anthropic ? data.content[0].text : data.choices[0].message.content;
         
-        return parseJsonResponse<{ ideas: ToolIdea[] }>(rawContent).ideas || [];
+        // SOTA Fix: Handle potentially undefined rawContent
+        return parseJsonResponse<{ ideas: ToolIdea[] }>(rawContent || '').ideas || [];
     });
 }
 
